@@ -9,10 +9,18 @@ services:
       - .env
     depends_on:
       - ai-service
+      - phishing-detector
 
   ai-service:
     build: ./services/ai-service
     ports:
       - "8000:8000"
+    env_file:
+      - .env
+
+  phishing-detector:
+    build: ./services/phishing-detector
+    ports:
+      - "1025:1025"
     env_file:
       - .env

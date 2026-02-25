@@ -1,0 +1,7 @@
+aiosmtpd
+httpx
+python-dotenv
+fastapi
+uvicorn
+oletools
+dnspython
