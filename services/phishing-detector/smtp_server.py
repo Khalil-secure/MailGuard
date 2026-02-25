@@ -3,8 +3,9 @@ import re
 import dns.resolver
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import AsyncMessage
-from checks import check_url_virustotal, check_domain_virustotal, check_ip_abuseipdb, compute_verdict
+
 import logging
+from checks import check_url_virustotal, check_domain_virustotal, check_ip_abuseipdb, compute_verdict, check_typosquatting , check_url_alienvault, check_domain_alienvault
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -82,27 +83,36 @@ class PhishingHandler(AsyncMessage):
         domains = extract_domains(urls)
         sender_domain = extract_sender_domain(message['from'])
         dns_checks = check_spf_dmarc(sender_domain) if sender_domain else {}
-
+        # Typosquatting check on sender domain
+       
         logger.info(f"Extracted — URLs: {urls} | IPs: {ips} | Domains: {domains}")
 
         # Run all checks
         check_results = []
 
+        # Typosquatting on sender
+        typosquat = check_typosquatting(sender_domain)
+        logger.info(f"Typosquatting: {typosquat}")
+        check_results.append(typosquat)
+
         for url in urls:
-            result = await check_url_virustotal(url)
-            check_results.append(result)
-            logger.info(f"VT URL check: {result}")
+            vt = await check_url_virustotal(url)
+            av = await check_url_alienvault(url)
+            check_results.extend([vt, av])
+            logger.info(f"VT URL: {vt}")
+            logger.info(f"AV URL: {av}")
 
         for domain in domains:
-            result = await check_domain_virustotal(domain)
-            check_results.append(result)
-            logger.info(f"VT Domain check: {result}")
+            vt = await check_domain_virustotal(domain)
+            av = await check_domain_alienvault(domain)
+            check_results.extend([vt, av])
+            logger.info(f"VT Domain: {vt}")
+            logger.info(f"AV Domain: {av}")
 
         for ip in ips:
             result = await check_ip_abuseipdb(ip)
             check_results.append(result)
-            logger.info(f"AbuseIPDB check: {result}")
-
+            logger.info(f"AbuseIPDB: {result}")
         final_verdict = compute_verdict(check_results)
         logger.info(f"=== FINAL VERDICT: {final_verdict} ===")
 

@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 
 VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
 ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
-
+ALIENVAULT_API_KEY = os.getenv("ALIENVAULT_API_KEY")
 HEADERS_VT = {"x-apikey": VIRUSTOTAL_API_KEY}
+HEADERS_AV = {"X-Api-Key": ALIENVAULT_API_KEY}
 
 # ── VirusTotal ────────────────────────────────────────────────────
 
@@ -88,3 +89,85 @@ def compute_verdict(results: list) -> str:
     if "SUSPICIOUS" in verdicts:
         return "SUSPICIOUS"
     return "SAFE"
+# ── Typosquatting Detection ───────────────────────────────────────
+
+KNOWN_BRANDS = [
+    "paypal.com", "google.com", "microsoft.com", "apple.com",
+    "amazon.com", "facebook.com", "instagram.com", "netflix.com",
+    "linkedin.com", "twitter.com", "x.com", "dropbox.com",
+    "zoom.us", "slack.com", "github.com", "outlook.com",
+    "office365.com", "live.com", "yahoo.com", "dhl.com",
+    "fedex.com", "ups.com", "bankofamerica.com", "chase.com",
+    "wellsfargo.com", "amex.com", "americanexpress.com"
+]
+
+def levenshtein(s1: str, s2: str) -> int:
+    if len(s1) < len(s2):
+        return levenshtein(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    previous = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current = [i + 1]
+        for j, c2 in enumerate(s2):
+            current.append(min(previous[j + 1] + 1, current[j] + 1, previous[j] + (c1 != c2)))
+        previous = current
+    return previous[-1]
+
+def check_typosquatting(domain: str) -> dict:
+    if not domain:
+        return {"verdict": "UNKNOWN", "reason": "No domain"}
+    
+    # Strip subdomains
+    parts = domain.split(".")
+    root = ".".join(parts[-2:]) if len(parts) >= 2 else domain
+
+    for brand in KNOWN_BRANDS:
+        if root == brand:
+            return {"verdict": "SAFE", "reason": f"Exact match: {brand}"}
+        distance = levenshtein(root, brand)
+        if distance <= 2:
+            return {
+                "verdict": "PHISHING",
+                "reason": f"'{root}' looks like '{brand}' (distance: {distance})"
+            }
+    return {"verdict": "SAFE", "reason": "No brand similarity detected"}
+# ── AlienVault OTX ────────────────────────────────────────────────
+async def check_url_alienvault(url: str) -> dict:
+    from urllib.parse import quote
+    endpoint = f"https://otx.alienvault.com/api/v1/indicators/url/{quote(url, safe='')}/general"
+    headers = {"X-OTX-API-KEY": ALIENVAULT_API_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(endpoint, headers=headers)
+        if r.status_code == 200:
+            data = r.json()
+            pulse_count = data.get("pulse_info", {}).get("count", 0)
+            return {
+                "source": "alienvault",
+                "target": url,
+                "pulse_count": pulse_count,
+                "verdict": "PHISHING" if pulse_count > 0 else "SAFE"
+            }
+    except Exception as e:
+        logger.error(f"AlienVault check failed: {e}")
+    return {"source": "alienvault", "target": url, "verdict": "UNKNOWN"}
+
+async def check_domain_alienvault(domain: str) -> dict:
+    endpoint = f"https://otx.alienvault.com/api/v1/indicators/domain/{domain}/general"
+    headers = {"X-OTX-API-KEY": ALIENVAULT_API_KEY}
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(endpoint, headers=headers)
+        if r.status_code == 200:
+            data = r.json()
+            pulse_count = data.get("pulse_info", {}).get("count", 0)
+            return {
+                "source": "alienvault",
+                "target": domain,
+                "pulse_count": pulse_count,
+                "verdict": "PHISHING" if pulse_count > 0 else "SAFE"
+            }
+    except Exception as e:
+        logger.error(f"AlienVault domain check failed: {e}")
+    return {"source": "alienvault", "target": domain, "verdict": "UNKNOWN"}
