@@ -3,8 +3,8 @@ import re
 import dns.resolver
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import AsyncMessage
+from checks import check_url_virustotal, check_domain_virustotal, check_ip_abuseipdb, compute_verdict
 import logging
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -71,34 +71,40 @@ def get_attachments(message) -> list:
     return attachments
 
 # ── SMTP Handler ──────────────────────────────────────────────────
-
 class PhishingHandler(AsyncMessage):
     async def handle_message(self, message):
         logger.info("=== NEW EMAIL RECEIVED ===")
-        logger.info(f"From: {message['from']}")
-        logger.info(f"To: {message['to']}")
-        logger.info(f"Subject: {message['subject']}")
+        logger.info(f"From: {message['from']} | Subject: {message['subject']}")
 
         body = get_email_body(message)
         urls = extract_urls(body)
         ips = extract_ips(body)
         domains = extract_domains(urls)
-        attachments = get_attachments(message)
         sender_domain = extract_sender_domain(message['from'])
         dns_checks = check_spf_dmarc(sender_domain) if sender_domain else {}
 
-        indicators = {
-            "sender": message['from'],
-            "sender_domain": sender_domain,
-            "dns_checks": dns_checks,
-            "urls": urls,
-            "ips": ips,
-            "domains": domains,
-            "attachments": [a["filename"] for a in attachments]
-        }
+        logger.info(f"Extracted — URLs: {urls} | IPs: {ips} | Domains: {domains}")
 
-        logger.info(f"INDICATORS EXTRACTED: {indicators}")
-        logger.info("=== END ===")
+        # Run all checks
+        check_results = []
+
+        for url in urls:
+            result = await check_url_virustotal(url)
+            check_results.append(result)
+            logger.info(f"VT URL check: {result}")
+
+        for domain in domains:
+            result = await check_domain_virustotal(domain)
+            check_results.append(result)
+            logger.info(f"VT Domain check: {result}")
+
+        for ip in ips:
+            result = await check_ip_abuseipdb(ip)
+            check_results.append(result)
+            logger.info(f"AbuseIPDB check: {result}")
+
+        final_verdict = compute_verdict(check_results)
+        logger.info(f"=== FINAL VERDICT: {final_verdict} ===")
 
 if __name__ == "__main__":
     handler = PhishingHandler()
