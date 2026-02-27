@@ -1,17 +1,21 @@
-import httpx
+import hvac
 import os
+import httpx
 import base64
 import logging
-from dotenv import load_dotenv
+from urllib.parse import quote
+from vault_client import get_secrets
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
-VIRUSTOTAL_API_KEY = os.getenv("VIRUSTOTAL_API_KEY")
-ABUSEIPDB_API_KEY = os.getenv("ABUSEIPDB_API_KEY")
-ALIENVAULT_API_KEY = os.getenv("ALIENVAULT_API_KEY")
+# Load secrets from Vault
+_secrets = get_secrets()
+VIRUSTOTAL_API_KEY = _secrets.get("VIRUSTOTAL_API_KEY")
+ABUSEIPDB_API_KEY = _secrets.get("ABUSEIPDB_API_KEY")
+ALIENVAULT_API_KEY = _secrets.get("ALIENVAULT_API_KEY")
+GOOGLE_SAFEBROWSING_API_KEY = _secrets.get("GOOGLE_SAFEBROWSING_API_KEY")
+
 HEADERS_VT = {"x-apikey": VIRUSTOTAL_API_KEY}
-HEADERS_AV = {"X-Api-Key": ALIENVAULT_API_KEY}
 
 # ── VirusTotal ────────────────────────────────────────────────────
 
