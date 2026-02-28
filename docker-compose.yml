@@ -14,6 +14,17 @@ services:
       - IPC_LOCK
     networks:
       - mailguard-net
+  postgres:
+    image: postgres:15
+    container_name: mailguard-postgres
+    environment:
+      POSTGRES_DB: mailguard
+      POSTGRES_USER: mailguard
+      POSTGRES_PASSWORD: mailguard123
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - mailguard-net
   gateway:
     build: ./services/gateway
     ports:
@@ -23,6 +34,7 @@ services:
     depends_on:
       - vault
       - phishing-detector
+      - postgres
     networks:
       - mailguard-net
 
@@ -57,3 +69,4 @@ networks:
     driver: bridge
 volumes:
   vault-data:
+  postgres-data:

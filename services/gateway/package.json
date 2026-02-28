@@ -11,6 +11,10 @@
     "axios": "^1.6.0",
     "jsonwebtoken": "^9.0.0",
     "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "passport": "^0.6.0",
+    "passport-google-oauth20": "^2.0.0",
+    "express-session": "^1.17.3",
+    "pg": "^8.11.0"
   }
 }
