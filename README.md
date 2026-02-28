@@ -1,23 +1,29 @@
 # MailGuard 🛡️
 
-> A production-grade cybersecurity SaaS built by a junior dev who refused to give up.
+> Production-grade email phishing detection SaaS — built from scratch by a junior dev who refused to give up.
 
-**Live demo:** http://35.241.196.133
+**Live demo:** https://mail-guard-beta.vercel.app
 
 ---
 
 ## What is this?
 
-MailGuard is a microservices-based email phishing detection platform. You paste any suspicious email, and the system cross-references it against 5 global threat intelligence databases in real time, returning a clear verdict: **SAFE**, **SUSPICIOUS**, or **PHISHING**.
+MailGuard is a full-stack SaaS platform that detects phishing emails in real time. Paste any suspicious email, and the system cross-references it against 5 global threat intelligence databases, returning a clear verdict: **SAFE**, **SUSPICIOUS**, or **PHISHING**.
 
-Built from scratch with Python, Node.js, Docker, and deployed on Google Cloud — this is both a portfolio project and a real, usable security tool.
+Built with a microservices architecture, Google OAuth authentication, PostgreSQL user accounts, HashiCorp Vault secret management, and deployed on Google Cloud — this is a real product, not a toy.
 
 ---
 
 ## Architecture
 
 ```
-Browser (Nginx :80)
+Browser (Vercel — HTTPS)
+        │
+        ▼
+Cloudflare Tunnel (HTTPS)
+        │
+        ▼
+Nginx Reverse Proxy (:80)
         │
         ▼
 API Gateway (Node.js/Express :3000)
@@ -25,48 +31,65 @@ API Gateway (Node.js/Express :3000)
         ▼                    ▼
 AI Service            Phishing Detector
 (FastAPI :8000)       (FastAPI :8001 + SMTP :1025)
-                             │
-                    ┌────────┼────────┬──────────┐
-                    ▼        ▼        ▼          ▼
-               VirusTotal  AlienVault  AbuseIPDB  Google
-                  OTX                            SafeBrowsing
-                             │
-                    Typosquatting Engine (local)
-                    SPF / DMARC DNS checks (local)
+        │                    │
+        ▼                    ▼
+  HuggingFace         VirusTotal · AlienVault OTX
+                      AbuseIPDB · Google Safe Browsing
+                      Typosquatting Engine
+        │
+        ▼
+HashiCorp Vault (:8200)     PostgreSQL (:5432)
+(Secrets management)        (Users + scan tracking)
 ```
 
-### Services
+### Containers
 
-| Service | Stack | Port | Role |
+| Container | Stack | Port | Role |
 |---|---|---|---|
-| `gateway` | Node.js / Express | 3000 | Single entry point, routes all requests |
-| `ai-service` | Python / FastAPI | 8000 | AI microservices (summarizer, etc.) |
-| `phishing-detector` | Python / FastAPI + aiosmtpd | 8001 / 1025 | Email threat analysis engine |
+| `gateway` | Node.js / Express | 3000 | Auth, routing, rate limiting |
+| `ai-service` | Python / FastAPI | 8000 | AI microservices |
+| `phishing-detector` | Python / FastAPI + aiosmtpd | 8001 / 1025 | Threat analysis engine |
+| `vault` | HashiCorp Vault | 8200 | Secret management |
+| `postgres` | PostgreSQL 15 | 5432 | Users + scan history |
 
 ---
 
 ## Features
 
-### Phishing Detector
-- **URL scanning** via VirusTotal (70+ antivirus engines) and AlienVault OTX
-- **Domain reputation** check via VirusTotal and AlienVault
-- **IP reputation** check via AbuseIPDB
-- **Google Safe Browsing** URL threat check
-- **Typosquatting detection** — catches `paypa1.com → paypal.com` style attacks using Levenshtein distance against 25+ known brands
-- **SPF / DMARC validation** — DNS-level sender domain checks
-- **SMTP server** — receives real emails on port 1025 for gateway-mode deployment
-- **REST API** — `POST /analyze` accepts raw email data, returns structured JSON verdict
-- **Auto-parsed email input** — paste a raw email, headers are extracted automatically
+### Authentication
+- **Google OAuth 2.0** — one-click sign in
+- **JWT tokens** — 7-day expiry, stateless
+- **PostgreSQL user store** — persists across restarts
 
-### AI Service
-- **Text summarizer** — powered by HuggingFace Inference API (`facebook/bart-large-cnn`)
-- Auto-generated Swagger docs at `/docs`
+### Rate Limiting
+- **10 free scans per day** per user
+- Tracked in PostgreSQL per user per 24h window
+- `429` response with upgrade message when limit reached
 
-### API Gateway
-- Single entry point for all services
-- Manual proxy with 120s timeout for slow AI/threat API responses
-- CORS enabled
-- Nginx reverse proxy on port 80 for clean browser access
+### Phishing Detection Engine
+- **Typosquatting** — Levenshtein distance against 25+ known brands (`paypa1.com → paypal.com`)
+- **VirusTotal** — URL and domain reputation (70+ AV engines)
+- **AlienVault OTX** — Threat pulse detection
+- **AbuseIPDB** — IP abuse confidence scoring
+- **Google Safe Browsing** — Google's threat database
+- **SPF / DMARC** — DNS-level sender validation
+- All checks run in **parallel** via `asyncio.gather`
+
+### Secret Management
+- **HashiCorp Vault** in production mode with file storage
+- Secrets persist across container restarts
+- Services fetch secrets at runtime — zero secrets on disk
+- Unseal key threshold: 3 of 5 keys required
+
+### Dual Interface
+- **REST API** — `POST /phishing/analyze`
+- **SMTP Server** — receives emails on port 1025
+
+### Frontend
+- Single paste box — paste raw email, headers auto-extracted
+- Instant verdict with full breakdown per engine
+- Scan counter showing remaining daily scans
+- Newsletter signup for lead capture
 
 ---
 
@@ -74,13 +97,15 @@ AI Service            Phishing Detector
 
 | Layer | Technology |
 |---|---|
-| Backend services | Python 3.11, FastAPI, uvicorn |
-| Gateway | Node.js 20, Express |
+| Frontend | HTML / CSS / JS — deployed on Vercel |
+| Gateway | Node.js 20, Express, Passport, JWT, pg |
+| Backend services | Python 3.11, FastAPI, uvicorn, httpx |
 | SMTP server | aiosmtpd |
-| HTTP client | httpx (async), axios |
-| DNS checks | dnspython |
+| Secret management | HashiCorp Vault (file storage) |
+| Database | PostgreSQL 15 |
 | Containerization | Docker, Docker Compose |
 | Reverse proxy | Nginx |
+| Tunnel | Cloudflare Tunnel |
 | Cloud | Google Cloud Compute Engine (e2-medium, Ubuntu 22.04) |
 | Threat APIs | VirusTotal, AlienVault OTX, AbuseIPDB, Google Safe Browsing |
 
@@ -89,26 +114,29 @@ AI Service            Phishing Detector
 ## Project Structure
 
 ```
-MailGuard/
+mailguard/
 ├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
+├── README.md
 ├── frontend/
-│   └── index.html              # Single-page UI
+│   ├── index.html
+│   └── vercel.json
 └── services/
     ├── gateway/
-    │   ├── index.js            # Express gateway + proxy
-    │   ├── auth.js             # JWT auth (in progress)
+    │   ├── index.js         # Express gateway, OAuth, JWT, rate limiting
+    │   ├── auth.js          # JWT middleware
     │   ├── package.json
     │   └── Dockerfile
     ├── ai-service/
-    │   ├── main.py             # FastAPI app
+    │   ├── main.py          # FastAPI summarizer
     │   ├── requirements.txt
     │   └── Dockerfile
     └── phishing-detector/
-        ├── smtp_server.py      # SMTP receiver + orchestrator
-        ├── api.py              # FastAPI REST endpoint
-        ├── checks.py           # All threat intelligence checks
+        ├── smtp_server.py   # SMTP receiver
+        ├── api.py           # FastAPI REST endpoint
+        ├── checks.py        # All threat intelligence checks
+        ├── vault_client.py  # HashiCorp Vault secret loader
         ├── requirements.txt
         └── Dockerfile
 ```
@@ -121,52 +149,89 @@ MailGuard/
 - Docker Desktop
 - Git
 - API keys (see below)
+- Google OAuth credentials
 
-### 1. Clone the repo
+### 1. Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/MailGuard.git
-cd MailGuard
+git clone https://github.com/khalil-secure/mailguard.git
+cd mailguard
 ```
 
-### 2. Set up environment variables
+### 2. Environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-Edit `.env` and fill in your API keys:
+Fill in `.env`:
 
 ```env
-HUGGINGFACE_API_KEY=hf_...
-VIRUSTOTAL_API_KEY=...
-ABUSEIPDB_API_KEY=...
-GOOGLE_SAFEBROWSING_API_KEY=...
-ALIENVAULT_API_KEY=...
-JWT_SECRET=your_random_secret_here
+# Threat intelligence
+VIRUSTOTAL_API_KEY=
+ABUSEIPDB_API_KEY=
+ALIENVAULT_API_KEY=
+GOOGLE_SAFEBROWSING_API_KEY=
+HUGGINGFACE_API_KEY=
+
+# Auth
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_CALLBACK_URL=
+JWT_SECRET=
+SESSION_SECRET=
+
+# Database
+DATABASE_URL=postgresql:
+
+# Vault
+VAULT_TOKEN=
+VAULT_ADDR=
 ```
 
-### 3. Run locally
+### 3. Run
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
-| Service | URL |
-|---|---|
-| Frontend | http://localhost (via Nginx) |
-| Gateway | http://localhost:3000 |
-| AI Service docs | http://localhost:8000/docs |
-| Phishing Detector docs | http://localhost:8001/docs |
+### 4. Initialize Vault
+
+```bash
+# Unseal Vault (first time only)
+docker exec -e VAULT_ADDR='http://127.0.0.1:8200' mailguard-vault vault operator init
+
+# Unseal with 3 of 5 keys
+docker exec -e VAULT_ADDR='http://127.0.0.1:8200' mailguard-vault vault operator unseal KEY1
+docker exec -e VAULT_ADDR='http://127.0.0.1:8200' mailguard-vault vault operator unseal KEY2
+docker exec -e VAULT_ADDR='http://127.0.0.1:8200' mailguard-vault vault operator unseal KEY3
+
+# Load secrets
+docker exec -e VAULT_ADDR='http://127.0.0.1:8200' -e VAULT_TOKEN='YOUR_ROOT_TOKEN' \
+  mailguard-vault vault kv put mailguard/api-keys \
+  VIRUSTOTAL_API_KEY=... \
+  ABUSEIPDB_API_KEY=... \
+  ALIENVAULT_API_KEY=... \
+  GOOGLE_SAFEBROWSING_API_KEY=... \
+  HUGGINGFACE_API_KEY=...
+```
 
 ---
 
 ## API Reference
 
+### Authentication
+
+```
+GET /auth/google              # Redirect to Google OAuth
+GET /auth/google/callback     # OAuth callback
+GET /auth/me                  # Get current user + scan count (JWT required)
+```
+
 ### Phishing Analysis
 
 ```
-POST /phishing/analyze
+POST /phishing/analyze        # Requires Bearer token
 ```
 
 **Request:**
@@ -174,7 +239,7 @@ POST /phishing/analyze
 {
   "sender": "security@paypa1.com",
   "subject": "Urgent: Verify your account",
-  "body": "Click here: http://suspicious-link.ru/login"
+  "body": "Click here: http://suspicious.ru/login"
 }
 ```
 
@@ -183,85 +248,28 @@ POST /phishing/analyze
 {
   "verdict": "PHISHING",
   "checks": [
-    {
-      "verdict": "PHISHING",
-      "reason": "'paypa1.com' looks like 'paypal.com' (distance: 1)"
-    },
-    {
-      "source": "virustotal",
-      "target": "http://suspicious-link.ru/login",
-      "malicious": 10,
-      "suspicious": 1,
-      "verdict": "PHISHING"
-    }
+    { "verdict": "PHISHING", "reason": "'paypa1.com' looks like 'paypal.com' (distance: 1)" },
+    { "source": "virustotal", "malicious": 10, "suspicious": 1, "verdict": "PHISHING" },
+    { "source": "safebrowsing", "verdict": "PHISHING", "flagged_urls": ["..."] }
   ],
   "sender_domain": "paypa1.com",
-  "dns_checks": { "spf": true, "dmarc": false },
-  "urls": ["http://suspicious-link.ru/login"],
-  "domains": ["suspicious-link.ru"],
-  "ips": [],
-  "analyzed_at": "2026-02-26T00:00:00.000000"
+  "dns_checks": { "spf": true, "dmarc": false }
 }
 ```
 
-**Verdict logic:**
-- Any single `PHISHING` signal → `PHISHING`
-- 2+ `SUSPICIOUS` signals → `SUSPICIOUS`
-- All clear → `SAFE`
-
-### AI Summarizer
-
-```
-POST /ai/summarize
-```
-
-**Request:**
+**Rate limit response (429):**
 ```json
 {
-  "text": "Long article or document text here..."
+  "error": "Daily limit reached",
+  "message": "You have used all 10 free scans for today. Upgrade to Pro for unlimited scans.",
+  "scans_used": 10,
+  "limit": 10
 }
 ```
 
 ---
 
-## Deployment (Google Cloud)
-
-```bash
-# Create VM
-gcloud compute instances create MailGuard \
-  --machine-type=e2-medium \
-  --image-family=ubuntu-2204-lts \
-  --image-project=ubuntu-os-cloud \
-  --boot-disk-size=30GB \
-  --tags=http-server,https-server \
-  --zone=europe-west1-b
-
-# SSH in
-gcloud compute ssh MailGuard --zone=europe-west1-b
-
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-sudo usermod -aG docker $USER
-newgrp docker
-sudo apt-get install -y docker-compose-plugin
-
-# Clone and run
-git clone https://github.com/YOUR_USERNAME/MailGuard.git
-cd MailGuard
-cp .env.example .env
-nano .env  # fill in your keys
-docker compose up -d
-
-# Install and configure Nginx
-sudo apt-get install -y nginx
-sudo cp frontend/index.html /var/www/html/index.html
-# Configure /etc/nginx/sites-available/default to proxy /api/ to localhost:3000
-sudo systemctl restart nginx
-```
-
----
-
-## API Keys — Where to Get Them
+## API Keys
 
 | Service | Free Tier | Link |
 |---|---|---|
@@ -275,26 +283,26 @@ sudo systemctl restart nginx
 
 ## Roadmap
 
-- [ ] JWT authentication — lock API behind user accounts
-- [ ] File / attachment scanning via VirusTotal hash lookup
-- [ ] Macro detection in Office files (oletools)
-- [ ] Stripe integration — usage-based billing
-- [ ] Admin dashboard — scan history, user management
-- [ ] Domain name + HTTPS (Let's Encrypt)
-- [ ] Telegram / WhatsApp bot integration
-- [ ] Gmail plugin
+- [ ] Stripe integration — Pro plan for unlimited scans
+- [ ] Browser extension — real-time Gmail/Outlook flagging
+- [ ] File/attachment scanning — VirusTotal hash lookup
+- [ ] Custom domain + SSL (Let's Encrypt)
+- [ ] Admin dashboard — usage analytics
+- [ ] Webhook API — integrate with email providers
+- [ ] Mobile app
 
 ---
 
 ## The Story
 
-This project was built in a single session, layer by layer, with zero shortcuts. Every service was verified working before the next was built. Every problem was debugged in production. The "junior dev desperate for a job" is the author — and this is the proof of work.
+This entire platform was built in a single extended session — every service verified working before the next was built, every problem debugged in production.
 
-If you're hiring, you just watched the whole process. Here's the repo.
+The stack includes microservices, OAuth, JWT, secret management, threat intelligence APIs, Docker orchestration, cloud deployment, and a real SaaS business model.
+
+If you're a recruiter or hiring manager reading this: you just read the commit history. This is the work.
 
 ---
 
 ## License
 
 MIT
-
