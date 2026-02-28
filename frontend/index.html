@@ -439,10 +439,20 @@
         </div>
         <span class="logo-name">MailGuard</span>
       </a>
-      <div class="nav-right">
-        <a href="#how" class="nav-link">How it works</a>
-        <a href="#newsletter" class="nav-btn">Stay Protected</a>
-      </div>
+    <div class="nav-right">
+      <a href="#how" class="nav-link">How it works</a>
+      <div id="authSection">
+        <a href="https://reflections-curve-stack-coins.trycloudflare.com/auth/google" class="nav-btn" id="loginBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><path fill="#fff" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#fff" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#fff" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#fff" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Sign in with Google
+        </a>
+      <div id="userSection" style="display:none;align-items:center;gap:12px">
+        <span id="userName" style="font-size:14px;color:var(--muted);font-weight:500"></span>
+        <span id="scanCounter" style="font-size:13px;background:var(--accent-light);color:var(--accent);padding:4px 12px;border-radius:100px;font-weight:600"></span>
+        <button onclick="logout()" style="font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer">Sign out</button>
+    </div>
+  </div>
+</div>
     </div>
   </nav>
 
@@ -609,164 +619,196 @@ Failure to verify within 24 hours will result in permanent account closure.
   </footer>
 
   <script>
-   const API = 'https://reflections-curve-stack-coins.trycloudflare.com/phishing/analyze';
-    
+  const API = 'https://reflections-curve-stack-coins.trycloudflare.com';
+  const ANALYZE_URL = `${API}/phishing/analyze`;
 
-    function onInput() {
-      const val = document.getElementById('emailPaste').value;
-      document.getElementById('charCount').textContent = `${val.length} characters`;
-      document.getElementById('scanBtn').disabled = val.trim().length < 10;
+  let authToken = localStorage.getItem('mg_token');
+
+  // Handle OAuth callback — token in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('token')) {
+    authToken = urlParams.get('token');
+    localStorage.setItem('mg_token', authToken);
+    const name = urlParams.get('name');
+    if (name) localStorage.setItem('mg_name', decodeURIComponent(name));
+    window.history.replaceState({}, '', '/');
+  }
+
+  // Update UI based on auth state
+  async function updateAuthUI() {
+    if (!authToken) {
+      document.getElementById('loginBtn').style.display = 'flex';
+      document.getElementById('userSection').style.display = 'none';
+      return;
     }
-
-    function clearAll() {
-      document.getElementById('emailPaste').value = '';
-      document.getElementById('charCount').textContent = '0 characters';
-      document.getElementById('scanBtn').disabled = true;
-      document.getElementById('resultWrap').classList.remove('visible');
-      document.getElementById('verdictBox').style.display = 'none';
-      document.getElementById('breakdownCard').style.display = 'none';
-      document.getElementById('errorBar').classList.remove('active');
+    try {
+      const res = await fetch(`${API}/auth/me`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      if (!res.ok) throw new Error('Invalid token');
+      const user = await res.json();
+      document.getElementById('loginBtn').style.display = 'none';
+      document.getElementById('userSection').style.display = 'flex';
+      document.getElementById('userName').textContent = user.name.split(' ')[0];
+      document.getElementById('scanCounter').textContent = `${user.scans_remaining} scans left today`;
+    } catch {
+      logout();
     }
+  }
 
-    // Parse raw pasted email text into fields
-    function parseEmail(raw) {
-      const lines = raw.split('\n');
-      let sender = '', subject = '', body = '';
-      let bodyStart = false;
-      let headersDone = false;
+  function logout() {
+    localStorage.removeItem('mg_token');
+    localStorage.removeItem('mg_name');
+    authToken = null;
+    updateAuthUI();
+  }
 
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (!headersDone) {
-          if (/^from:/i.test(line)) {
-            sender = line.replace(/^from:\s*/i, '').trim();
-          } else if (/^subject:/i.test(line)) {
-            subject = line.replace(/^subject:\s*/i, '').trim();
-          } else if (line.trim() === '' && (sender || subject)) {
-            headersDone = true;
-          }
-        } else {
-          body += line + '\n';
-        }
-      }
+  updateAuthUI();
 
-      // Fallback: if no headers detected, treat everything as body
-      if (!sender && !subject) {
-        body = raw;
-        // Try extracting email address from anywhere
-        const emailMatch = raw.match(/[\w.-]+@[\w.-]+\.\w+/);
-        if (emailMatch) sender = emailMatch[0];
-      }
+  function onInput() {
+    const val = document.getElementById('emailPaste').value;
+    document.getElementById('charCount').textContent = `${val.length} characters`;
+    document.getElementById('scanBtn').disabled = val.trim().length < 10;
+  }
 
-      return { sender: sender || 'unknown@unknown.com', subject, body: body.trim() || raw };
-    }
+  function clearAll() {
+    document.getElementById('emailPaste').value = '';
+    document.getElementById('charCount').textContent = '0 characters';
+    document.getElementById('scanBtn').disabled = true;
+    document.getElementById('resultWrap').classList.remove('visible');
+    document.getElementById('verdictBox').style.display = 'none';
+    document.getElementById('breakdownCard').style.display = 'none';
+    document.getElementById('errorBar').classList.remove('active');
+  }
 
-    async function analyze() {
-      const raw = document.getElementById('emailPaste').value.trim();
-      if (!raw) return;
-
-      const { sender, subject, body } = parseEmail(raw);
-
-      const btn = document.getElementById('scanBtn');
-      const scanBar = document.getElementById('scanningBar');
-      const errorBar = document.getElementById('errorBar');
-      const resultWrap = document.getElementById('resultWrap');
-
-      btn.disabled = true;
-      scanBar.classList.add('active');
-      errorBar.classList.remove('active');
-      document.getElementById('verdictBox').style.display = 'none';
-      document.getElementById('breakdownCard').style.display = 'none';
-      resultWrap.classList.add('visible');
-
-      resultWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      try {
-        const res = await fetch(API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sender, subject, body })
-        });
-
-        if (!res.ok) throw new Error(`Server error ${res.status}`);
-        renderResult(await res.json());
-      } catch (err) {
-        document.getElementById('errorText').textContent = `Something went wrong: ${err.message}. Please try again.`;
-        errorBar.classList.add('active');
-      } finally {
-        btn.disabled = false;
-        scanBar.classList.remove('active');
-        onInput();
+  function parseEmail(raw) {
+    const lines = raw.split('\n');
+    let sender = '', subject = '', body = '';
+    let headersDone = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!headersDone) {
+        if (/^from:/i.test(line)) sender = line.replace(/^from:\s*/i, '').trim();
+        else if (/^subject:/i.test(line)) subject = line.replace(/^subject:\s*/i, '').trim();
+        else if (line.trim() === '' && (sender || subject)) headersDone = true;
+      } else {
+        body += line + '\n';
       }
     }
+    if (!sender && !subject) {
+      body = raw;
+      const emailMatch = raw.match(/[\w.-]+@[\w.-]+\.\w+/);
+      if (emailMatch) sender = emailMatch[0];
+    }
+    return { sender: sender || 'unknown@unknown.com', subject, body: body.trim() || raw };
+  }
 
-    function renderResult(data) {
-      const v = data.verdict;
-      const map = {
-        PHISHING: { emoji: '🚨', heading: 'Phishing Detected', sub: 'This email shows clear signs of a phishing attempt. Do not click any links, download attachments, or reply.' },
-        SUSPICIOUS: { emoji: '⚠️', heading: 'Looks Suspicious', sub: 'Some signals raised red flags. Proceed with caution and verify directly with the sender through a trusted channel.' },
-        SAFE: { emoji: '✅', heading: 'Looks Safe', sub: 'No threats detected across our intelligence databases. Stay vigilant — when in doubt, always verify.' }
-      };
-      const c = map[v] || { emoji: '❓', heading: 'Unknown', sub: 'We could not reach a clear verdict. Try again or add more email content.' };
+  async function analyze() {
+    if (!authToken) {
+      window.location.href = `${API}/auth/google`;
+      return;
+    }
 
-      const box = document.getElementById('verdictBox');
-      box.className = `verdict-box ${v}`;
-      document.getElementById('verdictEmoji').textContent = c.emoji;
-      document.getElementById('verdictHeading').textContent = c.heading;
-      document.getElementById('verdictSub').textContent = c.sub;
-      box.style.display = 'flex';
+    const raw = document.getElementById('emailPaste').value.trim();
+    if (!raw) return;
 
-      const list = document.getElementById('checksList');
-      list.innerHTML = '';
+    const { sender, subject, body } = parseEmail(raw);
+    const btn = document.getElementById('scanBtn');
+    const scanBar = document.getElementById('scanningBar');
+    const errorBar = document.getElementById('errorBar');
+    const resultWrap = document.getElementById('resultWrap');
 
-      data.checks.forEach(check => {
-        const cv = check.verdict || 'UNKNOWN';
-        const source = (check.source || 'Sender Analysis').replace(/_/g, ' ').toUpperCase();
+    btn.disabled = true;
+    scanBar.classList.add('active');
+    errorBar.classList.remove('active');
+    document.getElementById('verdictBox').style.display = 'none';
+    document.getElementById('breakdownCard').style.display = 'none';
+    resultWrap.classList.add('visible');
+    resultWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-        let detail = '';
-        let subDetail = '';
-
-        if (check.reason) {
-          detail = check.reason;
-          subDetail = 'Sender domain analysis';
-        } else if (check.malicious !== undefined) {
-          detail = check.target;
-          subDetail = `${check.malicious} malicious · ${check.suspicious} suspicious detections`;
-        } else if (check.pulse_count !== undefined) {
-          detail = check.target;
-          subDetail = `${check.pulse_count} threat pulse${check.pulse_count !== 1 ? 's' : ''} found`;
-        } else if (check.flagged_urls) {
-          detail = `Flagged: ${check.flagged_urls.join(', ')}`;
-          subDetail = 'Google Safe Browsing';
-        } else {
-          detail = check.target || 'No data returned';
-          subDetail = 'No threats detected';
-        }
-
-        const item = document.createElement('div');
-        item.className = 'check-item';
-        item.innerHTML = `
-          <div class="check-dot ${cv}"></div>
-          <div class="check-text">
-            ${detail}
-            <small>${subDetail} · ${source}</small>
-          </div>
-          <div class="check-badge ${cv}">${cv}</div>
-        `;
-        list.appendChild(item);
+    try {
+      const res = await fetch(ANALYZE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ sender, subject, body })
       });
 
-      document.getElementById('breakdownCard').style.display = 'block';
-    }
+      if (res.status === 429) {
+        const data = await res.json();
+        document.getElementById('errorText').textContent = data.message;
+        errorBar.classList.add('active');
+        return;
+      }
 
-    function subscribe() {
-      const email = document.getElementById('nlEmail').value.trim();
-      const name = document.getElementById('nlName').value.trim();
-      if (!email || !email.includes('@')) { alert('Please enter a valid email address.'); return; }
-      console.log('Subscriber:', { name, email });
-      document.getElementById('nlForm').style.display = 'none';
-      document.getElementById('nlSuccess').classList.add('active');
+      if (res.status === 401) {
+        logout();
+        window.location.href = `${API}/auth/google`;
+        return;
+      }
+
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      renderResult(await res.json());
+      updateAuthUI();
+    } catch (err) {
+      document.getElementById('errorText').textContent = `Something went wrong: ${err.message}`;
+      errorBar.classList.add('active');
+    } finally {
+      btn.disabled = false;
+      scanBar.classList.remove('active');
+      onInput();
     }
+  }
+
+  function renderResult(data) {
+    const v = data.verdict;
+    const config = {
+      PHISHING: { emoji: '🚨', heading: 'Phishing Detected', sub: 'This email shows clear signs of a phishing attempt. Do not click any links, download attachments, or reply.' },
+      SUSPICIOUS: { emoji: '⚠️', heading: 'Looks Suspicious', sub: 'Some signals raised red flags. Proceed with caution and verify directly with the sender through a trusted channel.' },
+      SAFE: { emoji: '✅', heading: 'Looks Safe', sub: 'No threats detected across our intelligence databases. Stay vigilant — when in doubt, always verify.' }
+    };
+    const c = config[v] || { emoji: '❓', heading: 'Unknown', sub: 'Could not reach a clear verdict.' };
+
+    const box = document.getElementById('verdictBox');
+    box.className = `verdict-box ${v}`;
+    document.getElementById('verdictEmoji').textContent = c.emoji;
+    document.getElementById('verdictHeading').textContent = c.heading;
+    document.getElementById('verdictSub').textContent = c.sub;
+    box.style.display = 'flex';
+
+    const list = document.getElementById('checksList');
+    list.innerHTML = '';
+    data.checks.forEach(check => {
+      const cv = check.verdict || 'UNKNOWN';
+      const source = (check.source || 'Sender Analysis').replace(/_/g, ' ').toUpperCase();
+      let detail = check.reason
+        || (check.malicious !== undefined ? `${check.target} — ${check.malicious} malicious, ${check.suspicious} suspicious` : '')
+        || (check.pulse_count !== undefined ? `${check.target} — ${check.pulse_count} threat pulse(s)` : '')
+        || (check.flagged_urls ? `Flagged: ${check.flagged_urls.join(', ')}` : '')
+        || check.target || 'No data from this source';
+
+      const item = document.createElement('div');
+      item.className = 'check-item';
+      item.innerHTML = `
+        <div class="check-dot ${cv}"></div>
+        <div class="check-text">${detail}<small>${source}</small></div>
+        <div class="check-badge ${cv}">${cv}</div>
+      `;
+      list.appendChild(item);
+    });
+
+    document.getElementById('breakdownCard').style.display = 'block';
+  }
+
+  function subscribe() {
+    const email = document.getElementById('nlEmail').value.trim();
+    const name = document.getElementById('nlName').value.trim();
+    if (!email || !email.includes('@')) { alert('Please enter a valid email.'); return; }
+    document.getElementById('nlForm').style.display = 'none';
+    document.getElementById('nlSuccess').classList.add('active');
+  }
   </script>
 </body>
 </html>
