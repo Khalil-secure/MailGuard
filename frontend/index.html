@@ -711,10 +711,7 @@ if (urlParams.get('token')) {
   }
 
   async function analyze() {
-    if (!authToken) {
-      window.location.href = `${API}/auth/google`;
-      return;
-    }
+    // Allow anonymous users — backend handles free tier
 
     const raw = document.getElementById('emailPaste').value.trim();
     if (!raw) return;
