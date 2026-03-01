@@ -12,6 +12,8 @@ MailGuard is a full-stack SaaS platform that detects phishing emails in real tim
 
 Built with a microservices architecture, Google OAuth authentication, PostgreSQL user accounts, HashiCorp Vault secret management, and deployed on Google Cloud — this is a real product, not a toy.
 
+![MailGuard detecting phishing](screenvideo/Mailguard_alt_preview.gif)
+
 ---
 
 ## Architecture
