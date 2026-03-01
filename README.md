@@ -4,6 +4,7 @@
 
 **Live demo:** https://mail-guard-beta.vercel.app
 
+
 ---
 
 ## What is this?
@@ -19,6 +20,12 @@ Built with a microservices architecture, Google OAuth authentication, PostgreSQL
 ## Architecture
 <img width="2525" height="1724" alt="mermaid-diagram-2026-02-28-154242" src="https://github.com/user-attachments/assets/67a59f01-5583-4892-8f61-46f7dbe355eb" />
 
+---
+
+## Architecture Decisions
+See [docs/decisions/](docs/decisions/) for full ADRs explaining every major technical choice.
+
+---
 
 ### Containers
 

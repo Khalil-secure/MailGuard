@@ -79,12 +79,6 @@ function checkFreeTier(req, res, next) {
   next()
 }
 
-  scans.push(now)
-  ipFreeScans.set(ip, scans)
-  req.freeScansUsed = scans.length
-  req.freeScansRemaining = 5 - scans.length
-  next()
-}
 
 // ── JWT MIDDLEWARE ──
 function verifyToken(req, res, next) {
