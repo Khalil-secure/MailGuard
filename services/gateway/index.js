@@ -55,6 +55,17 @@ async function initDB() {
 
 initDB().catch(console.error)
 
+async function updateActiveUsers() {
+  try {
+    const result = await pool.query('SELECT COUNT(*) FROM users')
+    metrics.activeUsers.set(parseInt(result.rows[0].count))
+  } catch (err) {
+    console.error('Failed to update active users metric:', err.message)
+  }
+}
+updateActiveUsers()
+setInterval(updateActiveUsers, 30000)
+
 // ── IP RATE LIMITING ──
 const ipRequests = new Map()
 const ipFreeScans = new Map()
