@@ -6,11 +6,33 @@ const { Pool } = require('pg')
 const { createProxyMiddleware } = require('http-proxy-middleware')
 
 const app = express()
+
 app.use(cors({ origin: true, credentials: true }))
 app.use(express.json())
 
+const metrics = require('./metrics')
+
+// Request duration tracking middleware
+app.use((req, res, next) => {
+  const end = metrics.requestDuration.startTimer({
+    method: req.method,
+    route: req.path
+  })
+  res.on('finish', () => {
+    end({ status: res.statusCode })
+  })
+  next()
+})
+
+// Metrics endpoint for Prometheus to scrape
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', metrics.register.contentType)
+  res.end(await metrics.register.metrics())
+})
+
 // PostgreSQL
 const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+
 
 async function initDB() {
   await pool.query(`
@@ -49,6 +71,7 @@ function ipRateLimit(req, res, next) {
   ipRequests.set(ip, requests)
 
   if (requests.length > max) {
+    metrics.rateLimitHits.inc({ limit_type: 'ip_limit' })
     return res.status(429).json({ error: 'Too many requests from this IP. Try again later.' })
   }
   next()
@@ -64,11 +87,12 @@ function checkFreeTier(req, res, next) {
   const scans = ipFreeScans.get(ip).filter(t => now - t < windowMs)
 
   if (scans.length >= 5) {
+    metrics.rateLimitHits.inc({ limit_type: 'free_tier' })
     return res.status(401).json({
       error: 'free_limit_reached',
       message: 'You have used all 5 free scans. Sign in with Google for 10 scans/day free.',
       scans_used: scans.length,
-      limit: 5
+      limit: 5       
     })
   }
 
@@ -108,11 +132,12 @@ async function checkUserRateLimit(req, res, next) {
 
   const count = parseInt(result.rows[0].count)
   if (count >= 10) {
+    metrics.rateLimitHits.inc({ limit_type: 'daily_limit' })
     return res.status(429).json({
       error: 'daily_limit_reached',
       message: 'You have used all 10 free scans today. Upgrade to Pro for unlimited scans.',
       scans_used: count,
-      limit: 10
+      limit: 10      
     })
   }
   req.scans_used = count
@@ -123,6 +148,12 @@ async function recordScan(userId) {
   await pool.query('INSERT INTO scans (user_id) VALUES ($1)', [userId])
 }
 
+metrics.scansTotal.inc({ verdict: data.verdict, user_type: req.user ? 'authenticated' : 'free' })
+if (data.checks) {
+  data.checks.filter(c => c.verdict !== 'SAFE').forEach(c => {
+    metrics.engineHits.inc({ engine: c.source })
+  })
+}
 // ── ROUTES ──
 
 app.get('/health', (req, res) => {
@@ -218,6 +249,18 @@ app.use('/phishing', ipRateLimit, verifyToken, requireAccessOrFree, checkUserRat
 
     // Add scan info to response
     const data = response.data
+
+     metrics.scansTotal.inc({
+      verdict: data.verdict || 'UNKNOWN',
+      user_type: req.user ? 'authenticated' : 'free'
+    })
+    if (data.checks) {
+      data.checks
+        .filter(c => c.verdict !== 'SAFE')
+        .forEach(c => metrics.engineHits.inc({ engine: c.source }))
+    }
+    // ← END BLOCK
+
     if (!req.user) {
       data._free_scans_remaining = req.freeScansRemaining
       data._free_scans_used = req.freeScansUsed

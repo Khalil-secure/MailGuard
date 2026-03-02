@@ -1,0 +1,220 @@
+{
+  "title": "MailGuard — Security Operations Dashboard",
+  "uid": "mailguard-soc",
+  "version": 1,
+  "schemaVersion": 38,
+  "refresh": "10s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Total Scans (Last 24h)",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "increase(mailguard_scans_total[24h])",
+        "legendFormat": "Scans"
+      }],
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 100 },
+              { "color": "red", "value": 500 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "Phishing Detected (Last 24h)",
+      "type": "stat",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "increase(mailguard_scans_total{verdict=\"PHISHING\"}[24h])",
+        "legendFormat": "Phishing"
+      }],
+      "options": { "colorMode": "background" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "Rate Limit Hits (Last 1h)",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "increase(mailguard_rate_limit_hits_total[1h])",
+        "legendFormat": "Rate Limits"
+      }],
+      "options": { "colorMode": "background" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Active Users (Last 24h)",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "mailguard_active_users_total",
+        "legendFormat": "Users"
+      }],
+      "options": { "colorMode": "background" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "blue", "mode": "fixed" }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "Scans Per Minute",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "rate(mailguard_scans_total[1m]) * 60",
+        "legendFormat": "Scans/min"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": { "lineWidth": 2, "fillOpacity": 10 }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "Verdict Breakdown",
+      "type": "piechart",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_scans_total{verdict=\"PHISHING\"}[24h])",
+          "legendFormat": "🚨 Phishing"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_scans_total{verdict=\"SUSPICIOUS\"}[24h])",
+          "legendFormat": "⚠️ Suspicious"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_scans_total{verdict=\"SAFE\"}[24h])",
+          "legendFormat": "✅ Safe"
+        }
+      ],
+      "options": { "pieType": "donut", "displayLabels": ["name", "percent"] }
+    },
+    {
+      "id": 7,
+      "title": "Threat Engine Hits",
+      "type": "bargauge",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"virustotal\"}[24h])",
+          "legendFormat": "VirusTotal"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"safebrowsing\"}[24h])",
+          "legendFormat": "Safe Browsing"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"alienvault\"}[24h])",
+          "legendFormat": "AlienVault"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"abuseipdb\"}[24h])",
+          "legendFormat": "AbuseIPDB"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"typosquatting\"}[24h])",
+          "legendFormat": "Typosquatting"
+        }
+      ],
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "gradient"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "title": "API Response Time (p95)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "histogram_quantile(0.95, rate(mailguard_request_duration_ms_bucket[5m]))",
+        "legendFormat": "p95 latency (ms)"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "thresholds": {
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 5000 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 9,
+      "title": "Live Scan Logs",
+      "type": "logs",
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+      "targets": [{
+        "datasource": "Loki",
+        "expr": "{service=\"gateway\"} |= \"scan\"",
+        "legendFormat": ""
+      }],
+      "options": {
+        "showTime": true,
+        "showLabels": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ]
+}
