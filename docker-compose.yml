@@ -15,11 +15,7 @@ services:
     networks:
       - mailguard-net
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "--server-response", "http://127.0.0.1:8200/v1/sys/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
+      disable: true
 
   postgres:
     image: postgres:15
@@ -39,15 +35,14 @@ services:
       retries: 3
       start_period: 15s
 
-  gateway:
+gateway:
     build: ./services/gateway
     ports:
       - "3000:3000"
     env_file:
       - .env
     depends_on:
-      vault:
-        condition: service_healthy
+      - vault
       phishing-detector:
         condition: service_healthy
       postgres:
