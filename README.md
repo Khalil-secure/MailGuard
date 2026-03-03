@@ -76,6 +76,23 @@ See [docs/decisions/](docs/decisions/) for full ADRs explaining every major tech
 - Scan counter showing remaining daily scans
 - Newsletter signup for lead capture
 
+## Observability
+
+| Tool | Role | Port |
+|------|------|------|
+| Prometheus | Metrics collection | 9090 |
+| Grafana | Dashboard & visualization | 3001 |
+| Loki | Log aggregation | 3100 |
+| Promtail | Log shipping | - |
+
+**Dashboard panels:**
+- Total scans / phishing detected / rate limit hits / active users
+- Scans per minute (live)
+- Verdict breakdown (donut chart)
+- Threat engine hits per API
+- API response time p95
+- 🌱 Carbon footprint (gCO2 per scan, GCP europe-west1)
+
 ---
 
 ## Tech Stack
@@ -291,5 +308,6 @@ If you're a recruiter or hiring manager reading this: you just read the commit h
 ## License
 
 MIT
+
 
 
