@@ -94,7 +94,7 @@ See [docs/decisions/](docs/decisions/) for full ADRs explaining every major tech
 - 🌱 Carbon footprint (gCO2 per scan, GCP europe-west1)
 ![MailGuard monitoring dashboard](screenshots_dashboard/first-dashboard%20.png)
 
-![MailGuard monitoring dashboard](screenshots_dashboard/second-d ashboard-carbonne-emission.png)
+![MailGuard monitoring dashboard](screenshots_dashboard/second-dashboard-carbonne-emission.png)
 
 ---
 
