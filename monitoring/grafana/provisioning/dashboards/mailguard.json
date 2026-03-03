@@ -1,220 +1,613 @@
 {
-  "title": "MailGuard — Security Operations Dashboard",
-  "uid": "mailguard-soc",
-  "version": 1,
-  "schemaVersion": 38,
-  "refresh": "10s",
-  "time": { "from": "now-1h", "to": "now" },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": false,
+      "tags": [],
+      "targetBlank": false,
+      "title": "New link",
+      "tooltip": "",
+      "type": "dashboards",
+      "url": ""
+    }
+  ],
   "panels": [
     {
-      "id": 1,
-      "title": "Total Scans (Last 24h)",
-      "type": "stat",
-      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
-      "targets": [{
-        "datasource": "Prometheus",
-        "expr": "increase(mailguard_scans_total[24h])",
-        "legendFormat": "Scans"
-      }],
-      "options": {
-        "colorMode": "background",
-        "graphMode": "area",
-        "textMode": "auto"
-      },
+      "datasource": {},
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
           "thresholds": {
+            "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
+              { "color": "green", "value": 0 },
               { "color": "yellow", "value": 100 },
               { "color": "red", "value": 500 }
             ]
           }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "increase(mailguard_scans_total[24h])",
+          "legendFormat": "Scans",
+          "range": true,
+          "refId": "A"
         }
-      }
+      ],
+      "title": "Total Scans (Last 24h)",
+      "type": "stat"
     },
     {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "red", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
       "id": 2,
-      "title": "Phishing Detected (Last 24h)",
-      "type": "stat",
-      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
-      "targets": [{
-        "datasource": "Prometheus",
-        "expr": "increase(mailguard_scans_total{verdict=\"PHISHING\"}[24h])",
-        "legendFormat": "Phishing"
-      }],
-      "options": { "colorMode": "background" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "fixedColor": "red", "mode": "fixed" }
-        }
-      }
-    },
-    {
-      "id": 3,
-      "title": "Rate Limit Hits (Last 1h)",
-      "type": "stat",
-      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
-      "targets": [{
-        "datasource": "Prometheus",
-        "expr": "increase(mailguard_rate_limit_hits_total[1h])",
-        "legendFormat": "Rate Limits"
-      }],
-      "options": { "colorMode": "background" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "fixedColor": "orange", "mode": "fixed" }
-        }
-      }
-    },
-    {
-      "id": 4,
-      "title": "Active Users (Last 24h)",
-      "type": "stat",
-      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
-      "targets": [{
-        "datasource": "Prometheus",
-        "expr": "mailguard_active_users_total",
-        "legendFormat": "Users"
-      }],
-      "options": { "colorMode": "background" },
-      "fieldConfig": {
-        "defaults": {
-          "color": { "fixedColor": "blue", "mode": "fixed" }
-        }
-      }
-    },
-    {
-      "id": 5,
-      "title": "Scans Per Minute",
-      "type": "timeseries",
-      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
-      "targets": [{
-        "datasource": "Prometheus",
-        "expr": "rate(mailguard_scans_total[1m]) * 60",
-        "legendFormat": "Scans/min"
-      }],
-      "fieldConfig": {
-        "defaults": {
-          "color": { "mode": "palette-classic" },
-          "custom": { "lineWidth": 2, "fillOpacity": 10 }
-        }
-      }
-    },
-    {
-      "id": 6,
-      "title": "Verdict Breakdown",
-      "type": "piechart",
-      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
       "targets": [
         {
           "datasource": "Prometheus",
           "expr": "increase(mailguard_scans_total{verdict=\"PHISHING\"}[24h])",
-          "legendFormat": "🚨 Phishing"
+          "legendFormat": "Phishing",
+          "refId": "A"
+        }
+      ],
+      "title": "Phishing Detected (Last 24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "orange", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "id": 3,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_rate_limit_hits_total[1h])",
+          "legendFormat": "Rate Limits",
+          "refId": "A"
+        }
+      ],
+      "title": "Rate Limit Hits (Last 1h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "blue", "mode": "fixed" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "id": 4,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "mailguard_active_users_total",
+          "legendFormat": "Users",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Active Users (Last 24h)",
+      "type": "stat"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red", "value": 80 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "editorMode": "code",
+          "expr": "rate(mailguard_scans_total[1m]) * 60",
+          "legendFormat": "Scans/min",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Scans Per Minute",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false }
+          },
+          "mappings": []
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "id": 6,
+      "options": {
+        "displayLabels": ["name", "percent"],
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "sort": "desc",
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_scans_total{verdict=\"PHISHING\"}[24h])",
+          "legendFormat": "🚨 Phishing",
+          "refId": "A"
         },
         {
           "datasource": "Prometheus",
           "expr": "increase(mailguard_scans_total{verdict=\"SUSPICIOUS\"}[24h])",
-          "legendFormat": "⚠️ Suspicious"
+          "legendFormat": "⚠️ Suspicious",
+          "refId": "B"
         },
         {
           "datasource": "Prometheus",
           "expr": "increase(mailguard_scans_total{verdict=\"SAFE\"}[24h])",
-          "legendFormat": "✅ Safe"
+          "legendFormat": "✅ Safe",
+          "refId": "C"
         }
       ],
-      "options": { "pieType": "donut", "displayLabels": ["name", "percent"] }
+      "title": "Verdict Breakdown",
+      "type": "piechart"
     },
     {
-      "id": 7,
-      "title": "Threat Engine Hits",
-      "type": "bargauge",
-      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
-      "targets": [
-        {
-          "datasource": "Prometheus",
-          "expr": "increase(mailguard_engine_hits_total{engine=\"virustotal\"}[24h])",
-          "legendFormat": "VirusTotal"
-        },
-        {
-          "datasource": "Prometheus",
-          "expr": "increase(mailguard_engine_hits_total{engine=\"safebrowsing\"}[24h])",
-          "legendFormat": "Safe Browsing"
-        },
-        {
-          "datasource": "Prometheus",
-          "expr": "increase(mailguard_engine_hits_total{engine=\"alienvault\"}[24h])",
-          "legendFormat": "AlienVault"
-        },
-        {
-          "datasource": "Prometheus",
-          "expr": "increase(mailguard_engine_hits_total{engine=\"abuseipdb\"}[24h])",
-          "legendFormat": "AbuseIPDB"
-        },
-        {
-          "datasource": "Prometheus",
-          "expr": "increase(mailguard_engine_hits_total{engine=\"typosquatting\"}[24h])",
-          "legendFormat": "Typosquatting"
-        }
-      ],
-      "options": {
-        "orientation": "horizontal",
-        "displayMode": "gradient"
-      },
+      "datasource": {},
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "thresholds" },
+          "mappings": [],
           "thresholds": {
+            "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
+              { "color": "green", "value": 0 },
               { "color": "yellow", "value": 10 },
               { "color": "red", "value": 50 }
             ]
           }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+      "id": 7,
+      "options": {
+        "displayMode": "gradient",
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"virustotal\"}[24h])",
+          "legendFormat": "VirusTotal",
+          "refId": "A"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"safebrowsing\"}[24h])",
+          "legendFormat": "Safe Browsing",
+          "refId": "B"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"alienvault\"}[24h])",
+          "legendFormat": "AlienVault",
+          "refId": "C"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"abuseipdb\"}[24h])",
+          "legendFormat": "AbuseIPDB",
+          "refId": "D"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "increase(mailguard_engine_hits_total{engine=\"typosquatting\"}[24h])",
+          "legendFormat": "Typosquatting",
+          "refId": "E"
         }
-      }
+      ],
+      "title": "Threat Engine Hits",
+      "type": "bargauge"
     },
     {
-      "id": 8,
-      "title": "API Response Time (p95)",
-      "type": "timeseries",
-      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
-      "targets": [{
-        "datasource": "Prometheus",
-        "expr": "histogram_quantile(0.95, rate(mailguard_request_duration_ms_bucket[5m]))",
-        "legendFormat": "p95 latency (ms)"
-      }],
+      "datasource": {},
       "fieldConfig": {
         "defaults": {
-          "unit": "ms",
-          "custom": { "lineWidth": 2, "fillOpacity": 10 },
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
           "thresholds": {
+            "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
+              { "color": "green", "value": 0 },
               { "color": "yellow", "value": 1000 },
               { "color": "red", "value": 5000 }
             ]
-          }
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, rate(mailguard_request_duration_ms_bucket[5m]))",
+          "legendFormat": "p95 latency (ms)",
+          "refId": "A"
         }
-      }
+      ],
+      "title": "API Response Time (p95)",
+      "type": "timeseries"
     },
     {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 20 },
       "id": 9,
-      "title": "Live Scan Logs",
-      "type": "logs",
-      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
-      "targets": [{
-        "datasource": "Loki",
-        "expr": "{service=\"mailguard-gateway-1\"} |= \"scan\"",
-        "legendFormat": ""
-      }],
       "options": {
-        "showTime": true,
+        "dedupStrategy": "none",
+        "enableInfiniteScrolling": false,
+        "enableLogDetails": true,
+        "showControls": false,
         "showLabels": true,
-        "wrapLogMessage": true,
-        "sortOrder": "Descending"
-      }
+        "showTime": true,
+        "sortOrder": "Descending",
+        "unwrappedColumns": false,
+        "wrapLogMessage": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Loki",
+          "direction": "backward",
+          "editorMode": "code",
+          "expr": "{service_name=\"mailguard-gateway-1\"}",
+          "legendFormat": "",
+          "queryType": "range",
+          "refId": "A"
+        }
+      ],
+      "title": "Live Scan Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "fixedColor": "green", "mode": "fixed" },
+          "mappings": [],
+          "unit": "none",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "yellow", "value": 0.01 },
+              { "color": "red", "value": 0.1 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 28 },
+      "id": 10,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "textMode": "auto"
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "mailguard_carbon_grams_total",
+          "legendFormat": "Total CO2 (g)",
+          "refId": "A"
+        }
+      ],
+      "title": "🌱 Total CO2 Emitted (grams)",
+      "type": "stat"
+    },
+    {
+      "datasource": {},
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "lineWidth": 2,
+            "showPoints": "auto"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 4, "w": 18, "x": 6, "y": 28 },
+      "id": 11,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(mailguard_carbon_grams_total{user_type=\"authenticated\"}[5m]) * 300",
+          "legendFormat": "Authenticated",
+          "refId": "A"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "rate(mailguard_carbon_grams_total{user_type=\"free\"}[5m]) * 300",
+          "legendFormat": "Free tier",
+          "refId": "B"
+        }
+      ],
+      "title": "🌍 CO2 Rate by User Type (g/5min)",
+      "type": "timeseries"
     }
-  ]
+  ],
+  "preload": false,
+  "refresh": "10s",
+  "schemaVersion": 42,
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "MailGuard — Security Operations Dashboard",
+  "uid": "mailguard-soc",
+  "version": 6,
+  "weekStart": ""
 }
